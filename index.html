@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculadora de Créditos</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #fff; --text: #14161a; --muted: #6b7280;
+    --line: #e3e6ea; --accent: #2563eb; --ok: #059669;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1115; --card: #181b21; --text: #eceef2; --muted: #9aa1ad; --line: #2a2e37; --accent: #60a5fa; --ok: #34d399; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.4 system-ui, -apple-system, Segoe UI, sans-serif; padding: 24px 16px; }
+  main { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 14px; }
+  label { display: block; font-size: 14px; margin-bottom: 12px; }
+  label span { display: block; margin-bottom: 4px; }
+  label small { color: var(--muted); }
+  input { width: 100%; padding: 9px 10px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+  input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .row:last-child { border-bottom: 0; }
+  .row b { font-variant-numeric: tabular-nums; text-align: right; }
+  .hero { margin-top: 16px; text-align: center; padding: 22px 18px; }
+  .hero .big { font-size: 40px; font-weight: 700; color: var(--ok); font-variant-numeric: tabular-nums; }
+  .hero p { margin: 4px 0 0; color: var(--muted); }
+  .note { font-size: 12px; color: var(--muted); margin-top: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Calculadora de créditos</h1>
+  <p class="sub">Converte o custo em dólar de uma chamada de API em créditos para o cliente.</p>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Configuração</h2>
+      <label><span>Margem de lucro (%)</span>
+        <input id="margem" type="number" step="any" min="0" value="300">
+        <small>300% = cobra 4× o custo (custo + 300% de lucro)</small></label>
+      <label><span>Valor mínimo por chamada (R$)</span>
+        <input id="minimo" type="number" step="any" min="0" value="0.01">
+        <small>Somado ao custo antes da margem, então nenhuma chamada sai de graça</small></label>
+      <label><span>Valor de 1 crédito (R$)</span>
+        <input id="valorCredito" type="number" step="any" min="0" value="1"></label>
+      <label><span>Cotação do dólar (R$)</span>
+        <input id="cotacao" type="number" step="any" min="0" value="5.50"></label>
+    </section>
+
+    <section class="card">
+      <h2>Simulador</h2>
+      <label><span>Custo da chamada (US$)</span>
+        <input id="custoUsd" type="number" step="any" min="0" value="0.02"></label>
+      <label><span>Créditos mensais do cliente</span>
+        <input id="creditos" type="number" step="any" min="0" value="1000"></label>
+    </section>
+  </div>
+
+  <section class="card hero">
+    <div class="big" id="chamadas">—</div>
+    <p>chamadas por mês até acabar o crédito do cliente</p>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Detalhamento</h2>
+    <div class="row"><span>Nosso custo por chamada</span><b id="custoBrl"></b></div>
+    <div class="row"><span>Custo + valor mínimo (base da margem)</span><b id="baseBrl"></b></div>
+    <div class="row"><span>Preço cobrado por chamada (US$)</span><b id="precoUsd"></b></div>
+    <div class="row"><span>Preço cobrado por chamada (R$)</span><b id="precoBrl"></b></div>
+    <div class="row"><span>Créditos consumidos por chamada</span><b id="credChamada"></b></div>
+    <div class="row"><span>Lucro por chamada</span><b id="lucro"></b></div>
+    <div class="row"><span>Receita do plano (créditos × valor do crédito)</span><b id="receita"></b></div>
+    <div class="row"><span>Custo total se o cliente usar tudo</span><b id="custoMes"></b></div>
+    <div class="row"><span>Lucro mensal se usar tudo</span><b id="lucroMes"></b></div>
+    <p class="note">Preço = (custo US$ × cotação + valor mínimo) × (1 + margem). Créditos por chamada = preço ÷ valor do crédito.</p>
+  </section>
+</main>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const n = id => parseFloat($(id).value) || 0;
+  const brl = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 4 });
+  const usd = v => v.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 6 });
+  const num = (v, d = 4) => v.toLocaleString('pt-BR', { maximumFractionDigits: d });
+
+  function calc() {
+    const margem = n('margem') / 100, valorCred = n('valorCredito'), cot = n('cotacao');
+    const custoUsd = n('custoUsd'), creditos = n('creditos');
+
+    const minimo = n('minimo');
+    const custoBrl = custoUsd * cot;
+    const baseBrl = custoBrl + minimo;
+    const precoBrl = baseBrl * (1 + margem);
+    const precoUsd = cot > 0 ? precoBrl / cot : 0;
+    const credChamada = valorCred > 0 ? precoBrl / valorCred : 0;
+    const chamadas = credChamada > 0 ? Math.floor(creditos / credChamada) : 0;
+    const lucro = precoBrl - custoBrl;
+
+    $('chamadas').textContent = credChamada > 0 ? num(chamadas, 0) : '—';
+    $('custoBrl').textContent = brl(custoBrl) + '  (' + usd(custoUsd) + ')';
+    $('baseBrl').textContent = brl(baseBrl);
+    $('precoUsd').textContent = usd(precoUsd);
+    $('precoBrl').textContent = brl(precoBrl);
+    $('credChamada').textContent = num(credChamada);
+    $('lucro').textContent = brl(lucro);
+    $('receita').textContent = brl(creditos * valorCred);
+    $('custoMes').textContent = brl(chamadas * custoBrl);
+    $('lucroMes').textContent = brl(chamadas * lucro);
+  }
+
+  document.querySelectorAll('input').forEach(i => i.addEventListener('input', calc));
+  calc();
+</script>
+</body>
+</html>
