@@ -43,7 +43,3 @@ Chamada de **US$ 0,02**, com os valores padrão:
 ## Rodar local
 
 É um único arquivo, sem dependências. Abra o `index.html` no navegador.
-
-## Licença
-
-MIT
